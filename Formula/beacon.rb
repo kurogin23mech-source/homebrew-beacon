@@ -1,13 +1,19 @@
 class Beacon < Formula
   desc "AI-driven milestone tracker for Claude Code sessions"
   homepage "https://github.com/kurogin23mech-source/beacon"
-  url "https://github.com/kurogin23mech-source/beacon/archive/refs/tags/v0.19.0.tar.gz"
-  sha256 "5eeafd6b77b9f1852078620256a4a594b06d6f3a8390ce440d0db6bd06fa58ab"
-  version "0.19.0"
+  url "https://github.com/kurogin23mech-source/beacon/archive/refs/tags/v0.20.0.tar.gz"
+  sha256 "e99f0db233a4f686abf6ed7096954a9221902ab2edf9438f09154a1c18d62076"
+  version "0.20.0"
   license "MIT"
 
   # Python 3.11 is recommended; 3.9+ is supported
   depends_on "python@3.11"
+
+  # ms-54 e-1169: channel/bus.mjs needs Node + npm at install time (to run
+  # `npm install` for the bus dependencies) and at runtime (to spawn the
+  # MCP server when Claude Code starts). Without node, `beacon channel
+  # install` fails to wire up beacon-bus DM.
+  depends_on "node"
 
   # Optional cloud features require these at runtime (not installed automatically)
   # Users who want cloud sync / auth should run:
@@ -29,6 +35,20 @@ class Beacon < Formula
 
     # Skills source files (distributed to ~/.claude/skills/ via `beacon skill install`).
     prefix.install "skills"
+
+    # ms-54 e-1169: ship channel/ assets (bus.mjs + package.json) and run
+    # `npm install` once at install time so the bundled deps live alongside
+    # libexec/. cmd_channel_install resolves this layout via candidate #3
+    # in _resolve_channel_root() (commands.py at libexec/, channel/ as
+    # sibling). node_modules is committed at install — the formula owns
+    # the lifecycle, runtime auto-install is the fallback for dev clones.
+    (libexec/"channel").install Dir["channel/*.mjs"], "channel/package.json"
+    if File.exist?("channel/package-lock.json")
+      (libexec/"channel").install "channel/package-lock.json"
+    end
+    cd(libexec/"channel") do
+      system "npm", "install", "--silent", "--no-audit", "--no-fund"
+    end
 
     # Rewrite BEACON_DIR inside bin/beacon so it points to libexec.
     # The original script resolves lib/ relative to itself; after install the
