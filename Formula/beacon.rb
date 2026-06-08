@@ -1,9 +1,9 @@
 class Beacon < Formula
   desc "AI-driven milestone tracker for Claude Code sessions"
   homepage "https://github.com/kurogin23mech-source/beacon"
-  url "https://github.com/kurogin23mech-source/beacon/archive/refs/tags/v0.21.6.tar.gz"
-  sha256 "ac82ddb6ff07dd7a6bcb554031ae888f8d6356eaaa9aa6ad3141044a66ce3d75"
-  version "0.21.6"
+  url "https://github.com/kurogin23mech-source/beacon/archive/refs/tags/v0.22.0.tar.gz"
+  sha256 "e617164535f3faf205f464bcc28f45dc618a5e3d39d76aed6b5f51c4eefc0136"
+  version "0.22.0"
   license "MIT"
 
   # Python 3.11 is recommended; 3.9+ is supported
@@ -23,6 +23,13 @@ class Beacon < Formula
   def install
     # Copy the shell entry-point
     bin.install "bin/beacon"
+
+    # ms-54 e-1167: install the bclaude wrapper so users can launch
+    # Claude Code with the Beacon DM channel pre-wired (or auto-disabled
+    # when opt-out is active). The bash version is the canonical one;
+    # bclaude.cmd is shipped for Windows users who may install via
+    # alternate paths but is not symlinked here.
+    bin.install "bin/bclaude"
 
     # Copy the Python library into a versioned libexec directory so that
     # the shell script can locate it regardless of the Homebrew prefix.
@@ -93,6 +100,14 @@ class Beacon < Formula
       or you can install them on demand with:
         beacon skill install
 
+      Multi-session DM (ms-54 e-1167):
+        bclaude          # launches `claude` with the Beacon DM channel
+        beacon channel status  # check install / opt-out state
+      `bclaude` honors the opt-out flag (env BEACON_NO_BUS, project, or global)
+      and falls back to plain `claude` when set. Run `beacon channel install`
+      in your project to wire up the MCP entry, or `beacon channel opt-out`
+      to disable DM entirely.
+
       Full documentation: https://github.com/kurogin23mech-source/beacon
     EOS
   end
@@ -104,5 +119,9 @@ class Beacon < Formula
     # Verify the library files are accessible from the patched paths
     assert_predicate libexec/"commands.py", :exist?
     assert_predicate libexec/"dashboard.py", :exist?
+
+    # ms-54 e-1167: bclaude wrapper is on PATH and looks like a script.
+    assert_predicate bin/"bclaude", :exist?
+    assert_predicate bin/"bclaude", :executable?
   end
 end
